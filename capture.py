@@ -400,7 +400,7 @@ class CaptureRules:
             redCount += agentState.numReturned
           else:
             blueCount += agentState.numReturned
-        
+
         if blueCount >= foodToWin:#state.getRedFood().count() == MIN_FOOD:
           print 'The Blue team has returned at least %d of the opponents\' dots.' % foodToWin
         elif redCount >= foodToWin:#state.getBlueFood().count() == MIN_FOOD:
@@ -534,7 +534,7 @@ class AgentRules:
           agent.numCarrying += 1
           break # the above should only be true for one agent...
 
-      # do all the score and food grid maintainenace 
+      # do all the score and food grid maintainenace
       #state.data.scoreChange += score
       state.data.food = state.data.food.copy()
       state.data.food[x][y] = False
@@ -575,7 +575,7 @@ class AgentRules:
     # ok so agentState is this:
     if (agentState.numCarrying == 0):
       return
-    
+
     # first, score changes!
     # we HACK pack that ugly bug by just determining if its red based on the first position
     # to die...
@@ -887,9 +887,9 @@ def readCommand( argv ):
     else:
       l = layout.getLayout( options.layout )
     if l == None: raise Exception("The layout " + options.layout + " cannot be found")
-    
+
     layouts.append(l)
-    
+
   args['layouts'] = layouts
   args['length'] = options.time
   args['numGames'] = options.numGames
