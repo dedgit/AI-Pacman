@@ -31,7 +31,7 @@ from util import nearestPoint
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-               first='DummyAgent', second='DefensiveReflexAgent'):
+               first='TimidAgent', second='DefensiveReflexAgent'):
   """
   This function should return a list of two agents that will form the
   team, initialized using firstIndex and secondIndex as their agent
@@ -130,55 +130,21 @@ class ReflexCaptureAgent(CaptureAgent):
     """
     return {'successorScore': 1.0}
 
-
-class OffensiveReflexAgent(ReflexCaptureAgent):
-  """
-  A reflex agent that seeks food. This is an agent
-  we give you to get an idea of what an offensive agent might look like,
-  but it is by no means the best or only way to build an offensive agent.
-  """
-
-  def getFeatures(self, gameState, action):
-    features = util.Counter()
-
-    successor = self.getSuccessor(gameState, action)
-
-    foodList = self.getFood(successor).asList()
-    features['successorScore'] = -len(foodList)  # self.getScore(successor)
-
-    # Compute distance to the nearest food
-
-    if len(foodList) > 0:  # This should always be True,  but better safe than sorry
-      myPos = successor.getAgentState(self.index).getPosition()
-      minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
-      features['distanceToFood'] = minDistance
-    return features
-
-  def getWeights(self, gameState, action):
-    return {'successorScore': 100, 'distanceToFood': -1}
-
-  def chooseAction(self, gameState):
-    actions = gameState.getLegalActions(self.index)
-    action = random.choice(actions)
-
-    return action
-
-
 class DefensiveReflexAgent(ReflexCaptureAgent):
+  lastSuccess=0
+  flag=1
   """
   A reflex agent that keeps its side Pacman-free. Again,
   this is to give you an idea of what a defensive agent
   could be like.  It is not the best or only way to make
   such an agent.
   """
-
   def getFeatures(self, gameState, action):
     features = util.Counter()
     successor = self.getSuccessor(gameState, action)
 
     myState = successor.getAgentState(self.index)
     myPos = myState.getPosition()
-
     # Computes whether we're on defense (1) or offense (0)
     features['onDefense'] = 1
     if myState.isPacman: features['onDefense'] = 0
@@ -188,8 +154,30 @@ class DefensiveReflexAgent(ReflexCaptureAgent):
     invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
     features['numInvaders'] = len(invaders)
     if len(invaders) > 0:
+      print "here1"
       dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
-      features['invaderDistance'] = min(dists)
+      pos= [a.getPosition() for a in invaders]
+      nearestPos=pos[0]
+      nearestDst=dists[0]
+
+      for i in range(len(dists)):
+        if dists[i] < nearestDst:
+          nearestPos=pos[i]
+          nearestDst=dists[i]
+
+      features['invaderDistance']=nearestDst
+      if(features['invaderDistance']==1):
+        self.flag=0
+        self.lastSuccess=nearestPos
+        print "Got Him", self.lastSuccess , self.flag
+
+    elif(self.flag==1):
+      print "here2"
+      features['invaderDistance'] =self.getMostDenseArea(gameState)
+
+    elif(self.flag==0):
+      print "here3"
+      features['invaderDistance'] =self.getMazeDistance(myPos, self.lastSuccess)
 
     if action == Directions.STOP: features['stop'] = 1
     rev = Directions.REVERSE[gameState.getAgentState(self.index).configuration.direction]
@@ -199,9 +187,19 @@ class DefensiveReflexAgent(ReflexCaptureAgent):
 
   def getWeights(self, gameState, action):
     return {'numInvaders': -1000, 'onDefense': 100, 'invaderDistance': -10, 'stop': -100, 'reverse': -2}
+  def getMostDenseArea(self, gameState):
+    ourFood=self.getFoodYouAreDefending(gameState).asList()
+    distance=[self.getMazeDistance(gameState.getAgentPosition(self.index), a) for a in ourFood]
+    nearestFood=ourFood[0]
+    nearestDstance=distance[0]
 
+    for i in range(len(distance)):
+      if distance[i] < nearestDstance:
+        nearestFood=ourFood[i]
+        nearestDstance=distance[i]
+    return nearestDstance
 
-class DummyAgent(CaptureAgent):
+class TimidAgent(CaptureAgent):
   """
   A Dummy agent to serve as an example of the necessary agent structure.
   You should look at baselineTeam.py for more details about how to
@@ -238,11 +236,17 @@ class DummyAgent(CaptureAgent):
     Picks among actions randomly.
     """
     start = time.time()
+
     nearestFood = self.nearestFood(gameState)
     nearestEnemy = self.getNearestEnemy(gameState)
-    escapepath = self.escapePath(gameState, 36, 17, nearestEnemy)  # TODO
+
+    if len(nearestEnemy) > 0:
+      if nearestEnemy[1] < 2:
+         escapepath = self.escapePath(gameState, 36, 17, nearestEnemy)  # TODO
+
+
     actions = gameState.getLegalActions(self.index)
-    values = [self.evaluate(gameState, nearestFood, nearestEnemy, escapepath, a) for a in actions]
+    values = [self.evaluate(gameState, nearestFood, nearestEnemy, a) for a in actions]
     maxValue = max(values)
     bestActions = [a for a, v in zip(actions, values) if v == maxValue]
     # print 'eval time for agent %d: %.4f' % (self.index, time.time() - start)
@@ -256,6 +260,8 @@ class DummyAgent(CaptureAgent):
     '''
     You should change this in your own agent.
     '''
+    # print  actions
+    # print values
     action = random.choice(bestActions)
     # return Directions.STOP
     return action
@@ -310,7 +316,7 @@ class DummyAgent(CaptureAgent):
             break
 
       if myPos[0] == 1 and myPos[1] == 2:
-        # self.debugDraw(path, [1.0, 1.0, 1.0], True)
+        self.debugDraw(path, [1.0, 1.0, 1.0], True)
         # print path
         return path
 
@@ -329,7 +335,7 @@ class DummyAgent(CaptureAgent):
     food = self.getFood(gameState).asList()
     distance = [self.getMazeDistance(gameState.getAgentPosition(self.index), a) for a in food]
 
-    if len(food) < 1:
+    if len(food) < 3:
       previous = self.getFoodYouAreDefending(gameState).asList()[0]
       return [previous, self.getMazeDistance(gameState.getAgentPosition(self.index), previous)]
     nearestFood = food[0]
@@ -350,7 +356,7 @@ class DummyAgent(CaptureAgent):
     enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
     invaders = [a for a in enemies if not a.isPacman and a.getPosition() != None]
     dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
-
+    scare = 0
     if len(invaders) == 0:
       return []
     else:
@@ -360,31 +366,110 @@ class DummyAgent(CaptureAgent):
         if dists[i] < nearestDstance:
           nearestEnemy = invaders[i].getPosition()
           nearestDstance = dists[i]
-    return [nearestEnemy, nearestDstance]
+          scare = invaders[i].scaredTimer
+    # print scare
+    self.debugDraw(nearestEnemy,[1.0 , 0.5 , 0.5] , True)
+    return [nearestEnemy, nearestDstance,scare]
 
-  def evaluate(self, gameState, nearestFood, nearestEnemy, escapepath, action):
+  def evaluate(self, gameState, nearestFood, nearestEnemy, action):
 
     score = 0
     next = gameState.generateSuccessor(self.index, action)
-    # nextpos = next.getAgentPosition(self.index)
+    nextpos = next.getAgentPosition(self.index)
     nextscore = next.getScore()
     if nextscore > gameState.getScore():
-      score += 5
+      score += 2
 
-    if self.getMazeDistance(next.getAgentPosition(self.index), nearestFood[0]) < nearestFood[1]:
-      score += 1
+    if len(nearestEnemy) > 0 and nearestEnemy[2] > 0:
+      score -= 2*(self.getMazeDistance(next.getAgentPosition(self.index), nearestEnemy[0]) - nearestEnemy[1])
+
+    if  len(nearestEnemy) == 0:
+      if self.getMazeDistance(next.getAgentPosition(self.index), nearestFood[0]) < nearestFood[1]:
+        score += 1
+
+    pre =  self.getPreviousObservation()
+    if pre != None :
+      if self.getPreviousObservation().getAgentPosition(self.index) == nextpos:
+        score -= 5
+
 
     if len(nearestEnemy) > 0:
       if next.getAgentState(self.index).isPacman:
-        if self.getMazeDistance(next.getAgentPosition(self.index), nearestEnemy[0]) < nearestEnemy[1]:
-          score -= 2
+        score += (self.getMazeDistance(next.getAgentPosition(self.index), nearestEnemy[0]) - nearestEnemy[1])
 
         nextActions = next.getLegalActions(self.index)
         if len(nextActions) == 2:
           score -= 100
+    else:
+      score += 2
     # if [nextpos[0], nextpos[1]] in escapepath:
     #     score += 20
     if next.getAgentState(self.index).isPacman and action == Directions.STOP:
       score = -10
 
     return score
+
+
+  def escapePath2(self, game_state, width, height, enemy):
+
+    stack = util.Queue()
+    myState = game_state.getAgentState(self.index)
+    myPos = myState.getPosition()
+
+    visited = []
+    if len(enemy) > 0:
+      visited = [[enemy[0][0], enemy[0][1]]]
+    stack.push([myPos[0], myPos[1]])
+    path = []
+
+    while not stack.isEmpty():
+
+      myPos = [int(myPos[0]), int(myPos[1] + 0.5)]
+      psize = len(visited)
+      loop = []
+
+      right = [myPos[0] - 1, myPos[1]]
+      if right[0] >= 0 and right not in visited and not game_state.hasWall(right[0], right[1]):
+        stack.push(right)
+        visited.append(right)
+      if right in visited: loop.append(right)
+
+      up = [myPos[0], myPos[1] + 1]
+      if up[1] < height and up not in visited and not game_state.hasWall(up[0], up[1]):
+        stack.push(up)
+        visited.append(up)
+      if up in visited:  loop.append(up)
+
+      down = [myPos[0], myPos[1] - 1]
+      if down[1] >= 0 and down not in visited and not game_state.hasWall(down[0], down[1]):
+        stack.push(down)
+        visited.append(down)
+      if down in visited: loop.append(down)
+
+      left = [myPos[0] + 1, myPos[1]]
+      if left[0] < width and left not in visited and not game_state.hasWall(left[0], left[1]):
+        stack.push(left)
+        visited.append(left)
+      if left in visited: loop.append(left)
+
+      if len(loop) > 0:
+        for i in reversed(path):
+          if abs(i[0] - myPos[0]) + abs(i[1] - myPos[1]) > 1:
+            path.remove(i)
+          else:
+            break
+
+      if myPos[0] == 1 and myPos[1] == 2:
+        self.debugDraw(path, [1.0, 1.0, 1.0], True)
+        # print path
+        return path
+
+      myPos = stack.pop()
+
+      for i in reversed(path):
+        if abs(i[0] - myPos[0]) + abs(i[1] - myPos[1]) > 1:
+          path.remove(i)
+        else:
+          break
+      path.append(myPos)
+    return path
