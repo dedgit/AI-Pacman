@@ -474,7 +474,7 @@ class AgentRules:
 
     # Update Configuration
     agentState = state.data.agentStates[agentIndex]
-    speed = 1.0
+    speed = 1
     # if agentState.isPacman: speed = 0.5
     vector = Actions.directionToVector( action, speed )
     oldConfig = agentState.configuration

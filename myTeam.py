@@ -248,6 +248,14 @@ class TimidAgent(CaptureAgent):
   create an agent as this is the bare minimum.
   """
 
+    def __init__(self, index, timeForComputing=.1):
+        CaptureAgent.__init__(self, index, timeForComputing=.1)
+        self.escapepath = []
+        self.eaten = 0
+        self.height = 0
+        self.width = 0
+        self.plan = [[], []]
+
     def registerInitialState(self, gameState):
         """
     This method handles the initial setup of the
@@ -263,15 +271,13 @@ class TimidAgent(CaptureAgent):
         self.eaten = 0
 
         self.height = len(gameState.getWalls()[0])
-
-        self.width = 0;
-
         for w in gameState.getWalls().asList():
             if w[1] == 0:
                 self.width += 1
 
         print self.height
         print self.width
+
 
         '''
     Make sure you do not delete the following line. If you would like to
@@ -299,41 +305,39 @@ class TimidAgent(CaptureAgent):
 
         nearestFood = self.nearestFood(gameState)
         nearestEnemy = self.getNearestEnemy(gameState)
-        escapepath = []
 
         if not gameState.getAgentState(self.index).isPacman:
             self.eaten = 0
+            while len(self.plan[0]) == 0:
+                y = random.choice(range(0, self.height, 1))
+                if not gameState.hasWall(int(self.width / 2), y):
+                    self.plan = [[int(self.width / 2) + 1, y],
+                                 self.bfs(gameState, self.width, self.height, nearestEnemy,
+                                          [int(self.width / 2), y])]
+            if len(self.plan[1]) == 0:
+                if not len(self.plan[0]) == 0:
+                    self.plan[1] = self.bfs(gameState, self.width, self.height, nearestEnemy, self.plan[0])
+            self.escapepath = self.plan[1]
         else:
+            self.plan = [[], []]
             if len(nearestEnemy) > 0:
-                if nearestEnemy[3]:
-                    escapepath = self.bfs(gameState, nearestEnemy[0][0], nearestEnemy[0][1], [])
+                if nearestEnemy[1] < 4 : #and len(self.escapepath) == 0:
+                    self.escapepath = self.bfs(gameState, self.width, self.height, nearestEnemy, [self.width / 2 - 4])
+                    print "RUN!!!"
+            else:
+                self.escapepath = []
+                if self.eaten == 5:
+                    self.escapepath = self.bfs(gameState, 36, 17, nearestEnemy, [self.width / 2 - 1])
 
-        if len(nearestEnemy) > 0:
-            if nearestEnemy[1] < 4:
-                escapepath = self.bfs(gameState, 36, 17, nearestEnemy)  # TODO
-
-        if self.eaten == 5:
-            escapepath = self.bfs(gameState, 36, 17, nearestEnemy)
+        # self.debugDraw(self.escapepath, [1.0, 1.0, 1.0], True)
+        # print self.escapepath
 
         actions = gameState.getLegalActions(self.index)
-        values = [self.evaluate(gameState, nearestFood, nearestEnemy, escapepath, a) for a in actions]
+        values = [self.evaluate(gameState, nearestFood, nearestEnemy, self.escapepath, a) for a in actions]
         maxValue = max(values)
         bestActions = [a for a, v in zip(actions, values) if v == maxValue]
-        # print 'eval time for agent %d: %.4f' % (self.index, time.time() - start)
-        # if self.index == 0:
-        #     if gameState.getAgentPosition(self.index)[0] == 1:
-        #         if Directions.NORTH in actions:
-        #             return Directions.NORTH
-        #         else:
-        #             return Directions.EAST
 
-        '''
-    You should change this in your own agent.
-    '''
-        # print  actions
-        # print values
         action = random.choice(bestActions)
-        # return Directions.STOP
         return action
 
     def escapePath(self, game_state, width, height, enemy):
@@ -445,41 +449,52 @@ class TimidAgent(CaptureAgent):
     def evaluate(self, gameState, nearestFood, nearestEnemy, escapepath, action):
 
         score = 0
+        scorelist = [0, 0, 0, 0, 0, 0, 0, 0, 0]
         next = gameState.generateSuccessor(self.index, action)
         nextpos = next.getAgentPosition(self.index)
         nextscore = next.getScore()
 
         if nextscore > gameState.getScore():
             score += 2
+            scorelist[0] = 2
 
-        if len(nearestEnemy) > 0 and nearestEnemy[2] > 0:
-            score -= 2 * (self.getMazeDistance(next.getAgentPosition(self.index), nearestEnemy[0]) - nearestEnemy[1])
+        # if len(nearestEnemy) > 0 > nearestEnemy[2] and nearestEnemy[1] < 3:
+        #     score -= 2 * (self.getMazeDistance(next.getAgentPosition(self.index), nearestEnemy[0]) - nearestEnemy[1])
+        #     scorelist[1] -= 2 * (
+        #         self.getMazeDistance(next.getAgentPosition(self.index), nearestEnemy[0]) - nearestEnemy[1])
 
-        if len(nearestEnemy) == 0:
-            if self.getMazeDistance(next.getAgentPosition(self.index), nearestFood[0]) < nearestFood[1]:
-                score += 1
+        # if len(nearestEnemy) == 0 or nearestEnemy[1:
+        if self.getMazeDistance(next.getAgentPosition(self.index), nearestFood[0]) < nearestFood[1]:
+            score += 1
+            scorelist[2] = 1
 
         pre = self.getPreviousObservation()
         if pre != None:
             if self.getPreviousObservation().getAgentPosition(self.index) == nextpos:
                 score -= 5
+                scorelist[3] = -5
 
-        if len(nearestEnemy) > 0:
+        if len(nearestEnemy) > 0 and nearestEnemy[1] < 4:
             if next.getAgentState(self.index).isPacman:
                 score += (self.getMazeDistance(next.getAgentPosition(self.index), nearestEnemy[0]) - nearestEnemy[1])
-
+                scorelist[4] = (
+                    self.getMazeDistance(next.getAgentPosition(self.index), nearestEnemy[0]) - nearestEnemy[1])
                 nextActions = next.getLegalActions(self.index)
                 if len(nextActions) == 2:
                     score -= 100
+                    scorelist[5] = -100
         else:
             score += 2
+            scorelist[6] = 2
 
         if len(escapepath) > 0:
             if [nextpos[0], nextpos[1]] in escapepath:
-                score += 10
-
+                if not (len(nearestEnemy) > 0 > nearestEnemy[2] and nearestEnemy[1] < 3):
+                    score += 10
+                    scorelist[7] = 10
         if action == Directions.STOP:
             score = -10
+            scorelist[8] = -10
 
         return score
 
@@ -547,7 +562,7 @@ class TimidAgent(CaptureAgent):
             path.append(myPos)
         return path
 
-    def bfs(self, game_state, width, height, enemy):
+    def bfs(self, game_state, width, height, enemy, point):
 
         queue = util.Queue()
         myState = game_state.getAgentState(self.index)
@@ -597,18 +612,30 @@ class TimidAgent(CaptureAgent):
             #             path.remove(i)
             #         else:
             #             break
-            path.append(myPos)
             myPos = queue.pop()
+            path.append(myPos)
 
             # print path
-            if myPos[0] == 15:
-                a = myPos
-                f = []
-                for i in reversed(path):
-                    if abs(a[0] - i[0]) + abs(a[1] - i[1]) <= 1:
-                        f.append(i)
-                        a = i
-                # self.debugDraw(f, [1.0, 1.0, 1.0], True)
-                return f
+            if len(point) == 1:
+                if myPos[0] == point[0]:
+                    a = myPos
+                    f = []
+                    for i in reversed(path):
+                        if abs(a[0] - i[0]) + abs(a[1] - i[1]) <= 1:
+                            f.append(i)
+                            a = i
+                            # self.debugDraw(f, [1.0, 1.0, 1.0], True)
+                    return f
+            else:
 
-        return path
+                if myPos[0] == point[0] and myPos[1] == point[1]:
+                    a = myPos
+                    f = []
+                    for i in reversed(path):
+                        if abs(a[0] - i[0]) + abs(a[1] - i[1]) <= 1:
+                            f.append(i)
+                            a = i
+                            # self.debugDraw(f, [1.0, 1.0, 1.0], True)
+                    return f
+
+        return []
