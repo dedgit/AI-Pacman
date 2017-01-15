@@ -144,18 +144,20 @@ class ReflexCaptureAgent(CaptureAgent):
                 nearestDstance = distance[i]
         return nearestFood
 
+
 class DefensiveReflexAgent(ReflexCaptureAgent):
-    lastSuccess=0
-    flag=1
-    flag2=0
-    currentFoods=[]
-    s=[]
+    lastSuccess = 0
+    flag = 1
+    flag2 = 0
+    currentFoods = []
+    s = []
     """
     A reflex agent that keeps its side Pacman-free. Again,
     this is to give you an idea of what a defensive agent
     could be like.  It is not the best or only way to make
     such an agent.
     """
+
     def getFeatures(self, gameState, action):
         self.start = self.getMostDenseArea(gameState)
 
@@ -164,69 +166,69 @@ class DefensiveReflexAgent(ReflexCaptureAgent):
 
         myState = successor.getAgentState(self.index)
         myPos = myState.getPosition()
-        self.s = (18,7)
-        #print self.s
+        self.s = (18, 7)
+        # print self.s
         # Computes whether we're on defense (1) or offense (0)
         features['onDefense'] = 1
         if myState.isPacman: features['onDefense'] = 0
 
-        features['Boundries']=self.getMazeDistance(myPos,self.s)
+        features['Boundries'] = self.getMazeDistance(myPos, self.s)
 
-        if(self.flag2==0):
-            self.flag2=1
-            self.currentFoods=self.getFoodYouAreDefending(gameState).asList()
+        if (self.flag2 == 0):
+            self.flag2 = 1
+            self.currentFoods = self.getFoodYouAreDefending(gameState).asList()
         # Computes distance to invaders we can see
         enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
         invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
 
-
         features['numInvaders'] = len(invaders)
         if len(invaders) > 0:
             dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
-            pos= [a.getPosition() for a in invaders]
-            nearestPos=pos[0]
-            nearestDst=dists[0]
+            pos = [a.getPosition() for a in invaders]
+            nearestPos = pos[0]
+            nearestDst = dists[0]
 
             for i in range(len(dists)):
                 if dists[i] < nearestDst:
-                    nearestPos=pos[i]
-                    nearestDst=dists[i]
+                    nearestPos = pos[i]
+                    nearestDst = dists[i]
 
-            features['invaderPDistance']=nearestDst
-            #print len(self.currentFoods), len(self.getFoodYouAreDefending(gameState).asList())
-            if(features['invaderDistance']==1 or features['invaderPDistance']==1 or features['invaderLDistance']==1):
-                print "here1"
-                self.flag=0
-                self.lastSuccess=nearestPos
-                features['invaderLDistance']=self.getMazeDistance(myPos, self.lastSuccess)
-                self.currentFoods=self.getFoodYouAreDefending(gameState).asList()
-                #print "Got Him", self.lastSuccess , self.flag
+            features['invaderPDistance'] = nearestDst
+            # print len(self.currentFoods), len(self.getFoodYouAreDefending(gameState).asList())
+            if (features['invaderDistance'] == 1 or features['invaderPDistance'] == 1 or features[
+                'invaderLDistance'] == 1):
+                # print "here1"
+                self.flag = 0
+                self.lastSuccess = nearestPos
+                features['invaderLDistance'] = self.getMazeDistance(myPos, self.lastSuccess)
+                self.currentFoods = self.getFoodYouAreDefending(gameState).asList()
+                # print "Got Him", self.lastSuccess , self.flag
 
-            if(len(self.currentFoods) > len(self.getFoodYouAreDefending(gameState).asList())):
-                print "here2"
-                nextFoods=self.getFoodYouAreDefending(gameState).asList()
-                print "Found Him"
+            if (len(self.currentFoods) > len(self.getFoodYouAreDefending(gameState).asList())):
+                # print "here2"
+                nextFoods = self.getFoodYouAreDefending(gameState).asList()
+                # print "Found Him"
                 for i in range(len(self.currentFoods)):
-                    #print self.currentFoods[i][0], self.currentFoods[i][1], nextFoods[i][0], nextFoods[i][1]
-                    if(len(self.currentFoods)>0 and len(nextFoods)>i):
-                        print "i: ",i,len(nextFoods),self.currentFoods[i][0],nextFoods[i][0],self.currentFoods[i][1],nextFoods[i][1]
-                        if(self.currentFoods[i][0]!=nextFoods[i][0] or self.currentFoods[i][1]!=nextFoods[i][1]):
-                            features['invaderPDistance']=self.getMazeDistance(myPos,self.currentFoods[i])
-                            print "MYYYY", self.currentFoods[i]
-                            self.lastSuccess=self.currentFoods[i]
-                            self.currentFoods=nextFoods
+                    # print self.currentFoods[i][0], self.currentFoods[i][1], nextFoods[i][0], nextFoods[i][1]
+                    if (len(self.currentFoods) > 0 and len(nextFoods) > i):
+                        # print "i: ",i,len(nextFoods),self.currentFoods[i][0],nextFoods[i][0],self.currentFoods[i][1],nextFoods[i][1]
+                        if (self.currentFoods[i][0] != nextFoods[i][0] or self.currentFoods[i][1] != nextFoods[i][1]):
+                            features['invaderPDistance'] = self.getMazeDistance(myPos, self.currentFoods[i])
+                            # print "MYYYY", self.currentFoods[i]
+                            self.lastSuccess = self.currentFoods[i]
+                            self.currentFoods = nextFoods
                             break
 
-                            #elif(self.flag==0):
-                            #print "here4"
-                            #features['invaderDistance']=self.getMazeDistance(myPos, self.lastSuccess)
+                            # elif(self.flag==0):
+                            # print "here4"
+                            # features['invaderDistance']=self.getMazeDistance(myPos, self.lastSuccess)
 
-                            #elif(self.flag==1):
-                            #print "here3"
-                            #if(self.lastSuccess==0):
-                            #print "hii"
-                            #self.lastSuccess=self.getMostDenseArea(gameState)
-                            #features['invaderDistance']=self.getMazeDistance(myPos, self.lastSuccess)
+                            # elif(self.flag==1):
+                            # print "here3"
+                            # if(self.lastSuccess==0):
+                            # print "hii"
+                            # self.lastSuccess=self.getMostDenseArea(gameState)
+                            # features['invaderDistance']=self.getMazeDistance(myPos, self.lastSuccess)
 
         if action == Directions.STOP: features['stop'] = 1
         rev = Directions.REVERSE[gameState.getAgentState(self.index).configuration.direction]
@@ -235,8 +237,9 @@ class DefensiveReflexAgent(ReflexCaptureAgent):
         return features
 
     def getWeights(self, gameState, action):
-        return {'numInvaders': -1000, 'onDefense': 100, 'invaderDistance': -10,'invaderPDistance':-20,
-                'invaderLDistance':-5, 'Boundries':-10, 'stop': -100, 'reverse': -2}
+        return {'numInvaders': -1000, 'onDefense': 100, 'invaderDistance': -10, 'invaderPDistance': -20,
+                'invaderLDistance': -5, 'Boundries': -10, 'stop': -100, 'reverse': -2}
+
 
 class TimidAgent(CaptureAgent):
     """
@@ -258,6 +261,18 @@ class TimidAgent(CaptureAgent):
     IMPORTANT: This method may run for at most 15 seconds.
     """
         self.eaten = 0
+
+        self.height = len(gameState.getWalls()[0])
+
+        self.width = 0;
+
+        for w in gameState.getWalls().asList():
+            if w[1] == 0:
+                self.width += 1
+
+        print self.height
+        print self.width
+
         '''
     Make sure you do not delete the following line. If you would like to
     use Manhattan distances instead of maze distances in order to save
@@ -276,19 +291,22 @@ class TimidAgent(CaptureAgent):
     """
         start = time.time()
 
-        if not gameState.getAgentState(self.index).isPacman:
-            self.eaten = 0
-
         mypos = gameState.getAgentPosition(self.index)
 
         if self.getPreviousObservation() is not None:
             if self.getPreviousObservation().hasFood(mypos[0], mypos[1]):
                 self.eaten += 1
-                print self.eaten
 
         nearestFood = self.nearestFood(gameState)
         nearestEnemy = self.getNearestEnemy(gameState)
         escapepath = []
+
+        if not gameState.getAgentState(self.index).isPacman:
+            self.eaten = 0
+        else:
+            if len(nearestEnemy) > 0:
+                if nearestEnemy[3]:
+                    escapepath = self.bfs(gameState, nearestEnemy[0][0], nearestEnemy[0][1], [])
 
         if len(nearestEnemy) > 0:
             if nearestEnemy[1] < 4:
@@ -368,7 +386,7 @@ class TimidAgent(CaptureAgent):
                         break
 
             if myPos[0] == 1 and myPos[1] == 2:
-                self.debugDraw(path, [1.0, 1.0, 1.0], True)
+                # self.debugDraw(path, [1.0, 1.0, 1.0], True)
                 # print path
                 return path
 
@@ -413,6 +431,7 @@ class TimidAgent(CaptureAgent):
             return []
         else:
             nearestEnemy = invaders[0].getPosition()
+            isPacman = invaders[0].isPacman
             nearestDstance = dists[0]
             for i in range(len(dists)):
                 if dists[i] < nearestDstance:
@@ -420,8 +439,8 @@ class TimidAgent(CaptureAgent):
                     nearestDstance = dists[i]
                     scare = invaders[i].scaredTimer
         # print scare
-        self.debugDraw(nearestEnemy, [1.0, 0.5, 0.5], True)
-        return [nearestEnemy, nearestDstance, scare]
+        # self.debugDraw(nearestEnemy, [1.0, 0.5, 0.5], True)
+        return [nearestEnemy, nearestDstance, scare, isPacman]
 
     def evaluate(self, gameState, nearestFood, nearestEnemy, escapepath, action):
 
@@ -452,6 +471,8 @@ class TimidAgent(CaptureAgent):
                 nextActions = next.getLegalActions(self.index)
                 if len(nextActions) == 2:
                     score -= 100
+        else:
+            score += 2
 
         if len(escapepath) > 0:
             if [nextpos[0], nextpos[1]] in escapepath:
@@ -512,7 +533,7 @@ class TimidAgent(CaptureAgent):
                         break
 
             if myPos[0] == 1 and myPos[1] == 2:
-                self.debugDraw(path, [1.0, 1.0, 1.0], True)
+                # self.debugDraw(path, [1.0, 1.0, 1.0], True)
                 # print path
                 return path
 
@@ -587,7 +608,7 @@ class TimidAgent(CaptureAgent):
                     if abs(a[0] - i[0]) + abs(a[1] - i[1]) <= 1:
                         f.append(i)
                         a = i
-                self.debugDraw(f, [1.0, 1.0, 1.0], True)
+                # self.debugDraw(f, [1.0, 1.0, 1.0], True)
                 return f
 
         return path
