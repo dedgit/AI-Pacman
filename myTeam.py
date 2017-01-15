@@ -235,7 +235,8 @@ class DefensiveReflexAgent(ReflexCaptureAgent):
         return features
 
     def getWeights(self, gameState, action):
-        return {'numInvaders': -1000, 'onDefense': 100, 'invaderDistance': -10,'invaderPDistance':-20,'invaderLDistance':-5, 'Boundries':-40, 'stop': -100, 'reverse': -2}
+        return {'numInvaders': -1000, 'onDefense': 100, 'invaderDistance': -10,'invaderPDistance':-20,
+                'invaderLDistance':-5, 'Boundries':-10, 'stop': -100, 'reverse': -2}
 
 class TimidAgent(CaptureAgent):
     """
@@ -451,8 +452,6 @@ class TimidAgent(CaptureAgent):
                 nextActions = next.getLegalActions(self.index)
                 if len(nextActions) == 2:
                     score -= 100
-        else:
-            score += 2
 
         if len(escapepath) > 0:
             if [nextpos[0], nextpos[1]] in escapepath:
